@@ -22,7 +22,7 @@ const SignIn = () => {
 
         try {
             const response = await axios.post(
-                'https://skana.onrender.com/api/login',
+                'http://localhost:5000/api/login',
                 { email, password },
                 { headers: { 'Content-Type': 'application/json' } }
             );

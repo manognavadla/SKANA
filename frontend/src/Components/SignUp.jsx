@@ -24,7 +24,7 @@ function SignUp() {
         }
         try {
             const response = await axios.post(
-                'https://skana.onrender.com/api/signup',
+                'http://localhost:5000/api/signup',
                 { name,email, password },
                 { headers: { 'Content-Type': 'application/json' } }
             );

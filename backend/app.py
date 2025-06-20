@@ -323,8 +323,11 @@ def is_skill_match(resume_skills, job_skill, threshold=0.3):
     
     similarity = jaccard_similarity(job_tokens, resume_tokens)
     return similarity >= threshold
-    
+
 def compare_skills(resume_text, job_text):
+    import json
+    import re
+
     prompt = rf"""
     Resume:
     {resume_text}
@@ -343,6 +346,8 @@ def compare_skills(resume_text, job_text):
     """
 
     try:
+        print("📨 Prompt being sent to Groq model:\n", prompt[:1000], "...\n")
+        
         chat_completion = groq_client.chat.completions.create(
             messages=[
                 {
@@ -350,13 +355,12 @@ def compare_skills(resume_text, job_text):
                     "content": prompt,
                 }
             ],
-            model="gemma-7b-it",
+            model="llama3-70b-8192",
         )
+        
         response = chat_completion.choices[0].message.content
-        
-        # Print the raw response for debugging
-        print("Raw API response:", response)
-        
+        print("🟢 Raw API response:", response)
+
         # Try to find and extract the JSON part of the response
         json_match = re.search(r'\{.*\}', response, re.DOTALL)
         if json_match:
@@ -373,15 +377,73 @@ def compare_skills(resume_text, job_text):
             raise ValueError(f"Missing required keys in JSON: {', '.join(missing_keys)}")
 
     except json.JSONDecodeError as e:
-        print(f"JSON Decode Error: {str(e)}")
-        print("Response causing the error:", response)
+        print(f"❌ JSON Decode Error: {str(e)}")
+        print("🟡 Response causing the error:", response if 'response' in locals() else "No response captured.")
         return {"error": f"Invalid JSON in API response: {str(e)}"}
+
     except Exception as e:
-        print(f"Error in skill analysis: {str(e)}")
-        print("Response causing the error:", response)
+        print(f"❌ Error in skill analysis: {str(e)}")
+        print("🟡 Response causing the error:", response if 'response' in locals() else "No response captured.")
         return {"error": f"Error in skill analysis: {str(e)}"}
 
-#@app.route('/recommend_course', methods=['POST'])
+# def compare_skills(resume_text, job_text):
+#     prompt = rf"""
+#     Resume:
+#     {resume_text}
+
+#     Job Description:
+#     {job_text}
+
+#     Based on the resume and job description provided, please:
+#     1. List skills mentioned in the resume As "skills_from_resume". ADD WITHOUT SUBHEADINGS.
+#     2. List the skills required in the job description in "skills_required_in_job", PLEASE AVOID WIDE AND GENERIC SKILLS AND ONLY MENTION DEFINITE SKILLS THAT CAN BE LEARNED THROUGH A UDEMY COURSE.
+#     If only key responsibilities\duties are mentioned, then extract the required skills from that.
+#     Otherwise, extract it from eligibility criteria, qualifications, or any other section that mentions the required skills.
+#     3. Compare the skills from the resume with the skills required in the job description and list the matching skills. in "matching_skills".
+#     4. List the skills from the job description that are not present in the resume As "skills_to_improve".
+#     Present the results in a structured JSON format.
+#     """
+
+#     try:
+#         chat_completion = groq_client.chat.completions.create(
+#             messages=[
+#                 {
+#                     "role": "user",
+#                     "content": prompt,
+#                 }
+#             ],
+#             model="llama3-70b-8192",
+#         )
+#         response = chat_completion.choices[0].message.content
+        
+#         # Print the raw response for debugging
+#         print("Raw API response:", response)
+        
+#         # Try to find and extract the JSON part of the response
+#         json_match = re.search(r'\{.*\}', response, re.DOTALL)
+#         if json_match:
+#             json_str = json_match.group(0)
+#             skills_data = json.loads(json_str)
+#         else:
+#             raise ValueError("No JSON object found in the response")
+
+#         required_keys = ["skills_from_resume", "skills_required_in_job", "matching_skills", "skills_to_improve"]
+#         if all(key in skills_data for key in required_keys):
+#             return skills_data
+#         else:
+#             missing_keys = [key for key in required_keys if key not in skills_data]
+#             raise ValueError(f"Missing required keys in JSON: {', '.join(missing_keys)}")
+
+#     except json.JSONDecodeError as e:
+#         print(f"JSON Decode Error: {str(e)}")
+#         print("Response causing the error:", response)
+#         return {"error": f"Invalid JSON in API response: {str(e)}"}
+#     except Exception as e:
+#         print(f"Error in skill analysis: {str(e)}")
+#         print("Response causing the error:", response)
+#         return {"error": f"Error in skill analysis: {str(e)}"}
+
+@app.route('/recommend_course', methods=['POST'])
 def recommend_course_api():
     data = request.json
     skill_name = data.get('resource')
@@ -401,5 +463,5 @@ def recommend_course_api():
     
     return jsonify({'recommendation': recommended_link})
 
-# if __name__ == '__main__':
-#     app.run(port=5000, debug=True)
+if __name__ == '__main__':
+    app.run(port=5000, debug=True)
